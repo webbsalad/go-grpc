@@ -35,37 +35,72 @@ func Register(gRPC *grpc.Server, auth Auth) {
 
 func (s *serverAPI) Login(
 	ctx context.Context,
-	req *appv1.LoginRequest,
+	in *appv1.LoginRequest,
 ) (*appv1.LoginResponse, error) {
-	if req.GetEmail() == "" {
-		return nil, status.Error(codes.InvalidArgument, "not email")
+	if in.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
 	}
 
-	if req.GetPassword() == "" {
-		return nil, status.Error(codes.InvalidArgument, "not password")
+	if in.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "password is required")
 	}
 
-	token, err := s.auth.Login(ctx, req.GetEmail(), req.Password, int(req.GetAppId()))
+	if in.GetAppId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "app_id is required")
+	}
+
+	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()))
 	if err != nil {
-		return nil, status.Error(codes.Internal, "iternal error")
+		// if errors.Is(err, auth.ErrInvalidCredentials) {
+		// 	return nil, status.Error(codes.InvalidArgument, "invalid email or password")
+		// }
 
+		return nil, status.Error(codes.Internal, "failed to login")
 	}
 
-	return &appv1.LoginResponse{
-		Token: token,
-	}, nil
+	return &appv1.LoginResponse{Token: token}, nil
 }
 
 func (s *serverAPI) Register(
 	ctx context.Context,
-	req *appv1.RegisterRequest,
+	in *appv1.RegisterRequest,
 ) (*appv1.RegisterResponse, error) {
-	panic("1")
+	if in.Email == "" {
+		return nil, status.Error(codes.InvalidArgument, "email is required")
+	}
+
+	if in.Password == "" {
+		return nil, status.Error(codes.InvalidArgument, "password is required")
+	}
+
+	uid, err := s.auth.RegisterNewUser(ctx, in.GetEmail(), in.GetPassword())
+	if err != nil {
+		// if errors.Is(err, storage.ErrUserExists) {
+		// 	return nil, status.Error(codes.AlreadyExists, "user already exists")
+		// }
+
+		return nil, status.Error(codes.Internal, "failed to register user")
+	}
+
+	return &appv1.RegisterResponse{UserId: uid}, nil
 }
 
 func (s *serverAPI) IsAdmin(
 	ctx context.Context,
-	req *appv1.IsAdminRequest,
+	in *appv1.IsAdminRequest,
 ) (*appv1.IsAdminResponse, error) {
-	panic("1")
+	if in.UserId == 0 {
+		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+	}
+
+	isAdmin, err := s.auth.IsAdmin(ctx, in.GetUserId())
+	if err != nil {
+		// if errors.Is(err, storage.ErrUserNotFound) {
+		// 	return nil, status.Error(codes.NotFound, "user not found")
+		// }
+
+		return nil, status.Error(codes.Internal, "failed to check admin status")
+	}
+
+	return &appv1.IsAdminResponse{IsAdmin: isAdmin}, nil
 }
