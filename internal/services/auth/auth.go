@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/gofiber/fiber/v2/log"
 	"github.com/webbsalad/go-grpc/internal/domain/models"
 	"github.com/webbsalad/go-grpc/internal/lib/jwt"
 	"github.com/webbsalad/go-grpc/internal/lib/logger/sl"
@@ -113,33 +114,48 @@ func (a *Auth) RegisterNewUser(
 	email string,
 	pass string,
 ) (int64, error) {
-	// const op = "auth.RegisterNewUser"
-	// log := a.log.With(
-	// 	slog.String("op", op),
-	// 	slog.String("email", email),
-	// )
-	// log.Info("регистрация пользователя")
+	const op = "auth.RegisterNewUser"
+	log := a.log.With(
+		slog.String("op", op),
+		slog.String("email", email),
+	)
+	log.Info("регистрация пользователя")
 
-	// passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 
-	// if err != nil {
-	// 	log.Error("проблемы с генерацией пароля", sl.Err(err))
+	if err != nil {
+		log.Error("проблемы с генерацией пароля", sl.Err(err))
 
-	// 	return 0, fmt.Errorf("%s: %w", op, err)
-	// }
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
 
-	// id, err := a.usrSaver.SaveUser(ctx, email, passHash)
-	// if err != nil {
-	// 	log.Error("ошибка сохранения юзера", sl.Err(err))
+	id, err := a.usrSaver.SaveUser(ctx, email, passHash)
 
-	// 	return 0, fmt.Errorf("%s: %w", op, err)
-	// }
-	panic("не сделано регистер")
+	if err != nil {
+		log.Error("ошибка сохранения юзера", sl.Err(err))
+
+		return 0, fmt.Errorf("%s: %w", op, err)
+	}
+
+	return id, nil
 }
 
 func (a *Auth) IsAdmin(
 	ctx context.Context,
 	userID int64,
 ) (bool, error) {
-	panic("не сделано админ")
+	const op = "Auth.IsAdmin"
+
+	log.Info("проверка если юзер админ")
+
+	IsAdmin, err := a.usrProvider.IsAdmin(ctx, userID)
+
+	if err != nil {
+		return false, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("проверено сли пользователь админ", slog.Bool("is_admin: ", IsAdmin))
+
+	return IsAdmin, nil
+
 }
