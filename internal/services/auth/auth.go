@@ -56,6 +56,10 @@ func New(
 	}
 }
 
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
+
 func (a *Auth) Login(
 	ctx context.Context,
 	email string,

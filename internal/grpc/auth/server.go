@@ -2,7 +2,10 @@ package auth
 
 import (
 	"context"
+	"errors"
 
+	"github.com/webbsalad/go-grpc/internal/services/auth"
+	"github.com/webbsalad/go-grpc/internal/storage"
 	appv1 "github.com/webbsalad/test-protos/gen/go/app"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -38,24 +41,24 @@ func (s *serverAPI) Login(
 	in *appv1.LoginRequest,
 ) (*appv1.LoginResponse, error) {
 	if in.Email == "" {
-		return nil, status.Error(codes.InvalidArgument, "email is required")
+		return nil, status.Error(codes.InvalidArgument, "почта обязательна")
 	}
 
 	if in.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "password is required")
+		return nil, status.Error(codes.InvalidArgument, "пароль бязателен")
 	}
 
 	if in.GetAppId() == 0 {
-		return nil, status.Error(codes.InvalidArgument, "app_id is required")
+		return nil, status.Error(codes.InvalidArgument, "app_id обязателен")
 	}
 
 	token, err := s.auth.Login(ctx, in.GetEmail(), in.GetPassword(), int(in.GetAppId()))
 	if err != nil {
-		// if errors.Is(err, auth.ErrInvalidCredentials) {
-		// 	return nil, status.Error(codes.InvalidArgument, "invalid email or password")
-		// }
+		if errors.Is(err, auth.ErrInvalidCredentials) {
+			return nil, status.Error(codes.InvalidArgument, "неверная почта или пароль")
+		}
 
-		return nil, status.Error(codes.Internal, "failed to login")
+		return nil, status.Error(codes.InvalidArgument, "ошибка входа")
 	}
 
 	return &appv1.LoginResponse{Token: token}, nil
@@ -66,20 +69,20 @@ func (s *serverAPI) Register(
 	in *appv1.RegisterRequest,
 ) (*appv1.RegisterResponse, error) {
 	if in.Email == "" {
-		return nil, status.Error(codes.InvalidArgument, "email is required")
+		return nil, status.Error(codes.InvalidArgument, "почта обязательна")
 	}
 
 	if in.Password == "" {
-		return nil, status.Error(codes.InvalidArgument, "password is required")
+		return nil, status.Error(codes.InvalidArgument, "пароль обязателен")
 	}
 
 	uid, err := s.auth.RegisterNewUser(ctx, in.GetEmail(), in.GetPassword())
 	if err != nil {
-		// if errors.Is(err, storage.ErrUserExists) {
-		// 	return nil, status.Error(codes.AlreadyExists, "user already exists")
-		// }
+		if errors.Is(err, storage.ErrUserExists) {
+			return nil, status.Error(codes.AlreadyExists, "пользователь уже существует")
+		}
 
-		return nil, status.Error(codes.Internal, "failed to register user")
+		return nil, status.Error(codes.Internal, "ошибка регистрации польщзователя")
 	}
 
 	return &appv1.RegisterResponse{UserId: uid}, nil
@@ -90,16 +93,16 @@ func (s *serverAPI) IsAdmin(
 	in *appv1.IsAdminRequest,
 ) (*appv1.IsAdminResponse, error) {
 	if in.UserId == 0 {
-		return nil, status.Error(codes.InvalidArgument, "user_id is required")
+		return nil, status.Error(codes.InvalidArgument, "user_id обязателен")
 	}
 
 	isAdmin, err := s.auth.IsAdmin(ctx, in.GetUserId())
 	if err != nil {
-		// if errors.Is(err, storage.ErrUserNotFound) {
-		// 	return nil, status.Error(codes.NotFound, "user not found")
-		// }
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return nil, status.Error(codes.NotFound, "пользователь не найден")
+		}
 
-		return nil, status.Error(codes.Internal, "failed to check admin status")
+		return nil, status.Error(codes.Internal, "ошибка проверки статуса админа")
 	}
 
 	return &appv1.IsAdminResponse{IsAdmin: isAdmin}, nil

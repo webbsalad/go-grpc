@@ -37,7 +37,7 @@ func (a *App) MustRun() {
 }
 
 func (a *App) Run() error {
-	const op = "grpcapp.Run"
+	const op = "internal.app.grpc.Run"
 
 	log := a.log.With(slog.String("op", op))
 
@@ -55,7 +55,7 @@ func (a *App) Run() error {
 }
 
 func (a *App) Stop() {
-	const op = "grpc.Stop"
+	const op = "internal.app.grpc.Stop"
 
 	a.log.With(slog.String("op", op)).
 		Info("stopping server", slog.Int("port", a.port))
